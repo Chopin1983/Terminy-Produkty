@@ -85,6 +85,7 @@ Rowterminator = '\n');
 INSERT INTO Stanowiska(ID_Stanowiska, Nazwa)
 	Values(1,'Kierowca samochodu specjalnego'),(2,'Konserwator'),(3,'Inspektor'),(4,'Laborant');
 
+-- Tabela w której znajdują się produkty, które nie straciły okresu używalności.
 CREATE VIEW Tabela_Terminów as 
 
 With A as
@@ -109,7 +110,7 @@ where Pozostało_Dni > 0;
 -- Podgląd produktów, którym nie skończył sie termin używalności.
 select * from Tabela_Terminów;
 
-
+-- Procedura na wstawianie nowych tranzakcji, która blokuje wprowadzenie produktu, który nie stracił okresu używalności. 
 CREATE PROCEDURE Wstawianie_Tranzakcji
 @Numer_Obcy varchar(20),
 @Firma varchar(50),
@@ -135,6 +136,7 @@ end;
 --Wstawianie nowych tranzakcji
 exec Wstawianie_Tranzakcji [FA/1456/123], Krzak2, 5678901234, Polar, 110, '20240205', '1G', 1
 
+-- Tabela do Triggera, który kontroluje wykasowane tranzakcje
 CREATE TABLE Tranzakcje_Deleted
 (
 Nr int identity not null,
@@ -147,13 +149,12 @@ Data_Zakupu date not null,
 Constraint PK_Tranzakcje_Deleted Primary Key(Nr),
 Constraint CH_NIP_Tranzakce_Deleted check(len(NIP) = 10));
 
+-- Trigger, który kontroluje kasowanie tranzakcji
 CREATE TRIGGER Trigger_Delete on Tranzakcje after delete as
 INSERT INTO Tranzakcje_Deleted (Numer_obcy, NIP, Nazwa_Produktu, Data_Zakupu)
 SELECT Numer_Obcy, NIP, Nazwa_Produktu, Data_Zakupu from Deleted;
 
---Tabela wykasowanych tranzakcji
-select * from Tranzakcje_Deleted
-
+-- Tabela do Triggera, który kontroluje nadpisywanie tranzakcji
 CREATE TABLE Tranzakcje_Update
 (
 Nr int null,
@@ -178,7 +179,7 @@ ID_Pracownika_Ins tinyint not null,
 Constraint CH_NIP_Tranzakce_Update_Deleted check(len(NIP_Del) = 10),
 Constraint CH_NIP_Tranzakce_Update_Inserted check(len(NIP_Ins) = 10));
 
-
+-- Trigger kontrolujący nadpisywanie tranzakcji
 CREATE TRIGGER Trigger_Update on Tranzakcje after update as
 INSERT INTO Tranzakcje_Update (Nr,Numer_Obcy_Del, Numer_Obcy_Ins, Firma_Del, Firma_Ins, NIP_Del, NIP_Ins, Nazwa_Produktu_Del, Nazwa_Produktu_Ins,
 	Data_Zakupu_Del, Data_Zakupu_Ins, Wartość_Produktu_Del, Wartość_Produktu_Ins, ID_Produktu_Del, ID_Produktu_Ins, ID_Pracownika_Del, ID_Pracownika_Ins)
@@ -209,6 +210,7 @@ Select Nr, Zmiany, Login, Data
 --Tabela zmian dnych Tranzakcji
 select * from Tranzakcje_Update_View
 
+-- Tabela wszystkich dostępnych poleceń
 CREATE TABLE Tabela_Dostępnych_Poleceń
 (
 Opis varchar(max) not null,
@@ -217,14 +219,17 @@ Dostępne_kolumny varchar(max) not null)
 
 INSERT INTO Tabela_Dostępnych_Poleceń
 	Values('Wstawianie nowych faktur i paragonów za ubranie/odzież','exec Wstawianie_Tranzakcji FA/1456/123, Krzak2, 5678901234, Polar, 110, "20240205", "1G", 1','Numer_Obcy, Firma, NIP, Nazwa_Produktu, Wartość_Produktu, ID_Produktu, ID_Pracownika'),
-		  ('Podgląd Stanowisk i dopasowanie do ID_Stanowiska','select * from Stanowiska','ID_Stanowiska, Nazwa'),
-		  ('Historia wszystkich tranzakcji','select * from Tranzakcje','Nr, Numer_Obcy, Firma, NIP, Nazwa_Produktu, Wartość_Produktu, Data_Zakupu, ID_Produktu, ID_Pracownika'),
-		  ('Opis dostępnych produktów, okres i kwoty zwrotu','select * from Produkty','ID_Produktu, Stanowisko, Nazwa_Produktu, Okres_Używalności, Kwota_Zwrotu'),
-		  ('Dane Pracownika','select * from Pracownik','ID_Pracownika, Imię, Nazwisko, Ulica, Nr_Budynku, Nr_Mieszkania, Miasto, Kod, PESEL, Telefon, Płeć, ID_Stanowiska'),
-		  ('Tabela produktów zakupionych, którym nie skończył się okres używalności','select * from Tabela_Terminów','Imię, Nazwisko, Numer_Obcy, Nazwa_Produktu, Wartość_Produktu, Kwota_Zwrotu, Do_Zwrotu, Data_Zakupu, Koniec_Używalności, Pozostało_Dni, ID_Produktu, ID_Pracownika'),
-		  ('Zabezpieczenie na wypadek wykasowania zamówienia','select * from Tranzakcje_Deleted','Nr, Login, Data, Numer_Obcy, NIP, Nazwa_Produktu, Data_Zakupu'),
-		  ('Zabezpieczenie na wypadek dokonywanych zmian w Tranzakcji','select * from Tranzakcje_Update_View','Nr, Zmiany, Login, Data');
+	      ('Podgląd Stanowisk i dopasowanie do ID_Stanowiska','select * from Stanowiska','ID_Stanowiska, Nazwa'),
+	      ('Historia wszystkich tranzakcji','select * from Tranzakcje','Nr, Numer_Obcy, Firma, NIP, Nazwa_Produktu, Wartość_Produktu, Data_Zakupu, ID_Produktu, ID_Pracownika'),
+	      ('Opis dostępnych produktów, okres i kwoty zwrotu','select * from Produkty','ID_Produktu, Stanowisko, Nazwa_Produktu, Okres_Używalności, Kwota_Zwrotu'),
+	      ('Dane Pracownika','select * from Pracownik','ID_Pracownika, Imię, Nazwisko, Ulica, Nr_Budynku, Nr_Mieszkania, Miasto, Kod, PESEL, Telefon, Płeć, ID_Stanowiska'),
+	      ('Tabela produktów zakupionych, którym nie skończył się okres używalności','select * from Tabela_Terminów','Imię, Nazwisko, Numer_Obcy, Nazwa_Produktu, Wartość_Produktu, Kwota_Zwrotu, Do_Zwrotu, Data_Zakupu, Koniec_Używalności, Pozostało_Dni, ID_Produktu, ID_Pracownika'),
+	      ('Zabezpieczenie na wypadek wykasowania zamówienia','select * from Tranzakcje_Deleted','Nr, Login, Data, Numer_Obcy, NIP, Nazwa_Produktu, Data_Zakupu'),
+	      ('Zabezpieczenie na wypadek dokonywanych zmian w Tranzakcji','select * from Tranzakcje_Update_View','Nr, Zmiany, Login, Data');
 
 
-
+-- Select do wszystkich dostępnych poleceń
 Select * from Tabela_Dostępnych_Poleceń
+
+-- Dostęp do plików użytych w projekcie
+https://www.dropbox.com/scl/fo/yvriyohcozv0bux228rnu/AMkio4jJ4mzUnvBtNcJFbdM?rlkey=68zjlo1hg2b9xduxe6ioi6zxm&st=dnodu7p0&dl=0

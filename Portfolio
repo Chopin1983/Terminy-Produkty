@@ -221,4 +221,5 @@ INSERT INTO Table_Available_Orders
 
 Select * from Table_Available_Orders
 
-
+-- Tables availeble for download -- Pracownik, Tabele Zwrotów, Tranzakcje
+https://www.dropbox.com/scl/fo/yvriyohcozv0bux228rnu/AMkio4jJ4mzUnvBtNcJFbdM?rlkey=7hxz3gur7t2qdudnyg86pieyj&st=2h15fmz8&dl=0

@@ -1,64 +1,64 @@
 use Portfolio
 
-CREATE TABLE Stanowiska
+CREATE TABLE Positions
 (
-ID_Stanowiska tinyint not null,
-Nazwa varchar(50) not null,
-Constraint PK_Stanowiska Primary Key (ID_Stanowiska));
+ID_Position tinyint not null,
+Job_Name varchar(50) not null,
+Constraint PK_Position Primary Key (ID_Position));
 
-CREATE TABLE Produkty
+CREATE TABLE Products
 (
-ID_Produktu char(2) not null,
-Stanowisko tinyint not null,
-Nazwa_Produktu varchar(100) not null,
-Okres_Używalności tinyint not null,
-Kwota_Zwrotu money not null,
-Constraint PK_Produkty Primary Key (ID_Produktu));
+ID_Product char(2) not null,
+Position tinyint not null,
+Product_Name varchar(100) not null,
+Expiry_Date tinyint not null,
+Refund_Amount money not null,
+Constraint PK_Products Primary Key (ID_Product));
 
-CREATE TABLE Pracownik 
+CREATE TABLE Employee
 (
-ID_Pracownika tinyint not null,
-Imię varchar(20) not null,
-Nazwisko varchar(50) not null,
-Ulica varchar(50) not null,
-Nr_Budynku smallint not null,
-Nr_Mieszkania smallint null,
-Miasto varchar(30) not null,
-Kod numeric(5,0) not null,
+ID_Employee tinyint not null,
+Name varchar(20) not null,
+Last_Name varchar(50) not null,
+Street varchar(50) not null,
+Nr_Building smallint not null,
+Nr_Apartment smallint null,
+City varchar(30) not null,
+Zip numeric(5,0) not null,
 PESEL numeric(11,0) not null,
-Telefon numeric(9,0) null,
-Płeć char(1) not null,
-ID_Stanowiska tinyint not null,
-Constraint PK_Pracownik Primary Key (ID_Pracownika),
-Constraint FK_Pracownik_Stanowisko Foreign Key (ID_Stanowiska)
-References Stanowiska(ID_Stanowiska),
-Constraint CH_Kod check(len(Kod) = 5),
+Phone numeric(9,0) null,
+Sex char(1) not null,
+ID_Position tinyint not null,
+Constraint PK_Employee Primary Key (ID_Employee),
+Constraint FK_Employee_Position Foreign Key (ID_Position)
+References Positions(ID_Position),
+Constraint CH_Zip check(len(Zip) = 5),
 Constraint CH_PESEL check(len(PESEL) = 11),
-Constraint CH_Telefon check(len(Telefon) = 9),
-Constraint CH_Płeć check(Płeć like '[KM]'));
+Constraint CH_Phone check(len(Phone) = 9),
+Constraint CH_Sex check(Sex like '[WM]'));
 
 
-CREATE TABLE Tranzakcje
+CREATE TABLE Transactions
 (
 Nr int identity not null,
-Numer_Obcy varchar(40) not null,
-Firma varchar(100) not null,
-NIP numeric(10,0) not null,
-Nazwa_Produktu varchar(100) not null,
-Wartość_Produktu money not null,
-Data_Zakupu date not null,
-ID_Produktu char(2) not null,
-ID_Pracownika tinyint not null,
+Foreign_Number varchar(40) not null,
+Company varchar(100) not null,
+TIN numeric(10,0) not null,
+Product_Name varchar(100) not null,
+Product_Value money not null,
+Date_Od_Purchase date not null,
+ID_Product char(2) not null,
+ID_Employee tinyint not null,
 Constraint PK_Nr Primary Key (Nr),
-Constraint FK_ID_Produktu Foreign Key (ID_Produktu)
-References Produkty(ID_Produktu),
-Constraint FK_ID_Pracownika Foreign Key (ID_Pracownika)
-References Pracownik(ID_Pracownika),
-Constraint CH_NIP check(len(NIP) = 10),
-Constraint CH_Data check(Data_Zakupu > Dateadd(day,-31,sysdatetime())))
+Constraint FK_ID_Product Foreign Key (ID_Product)
+References Products(ID_Product),
+Constraint FK_ID_Employee Foreign Key (ID_Employee)
+References Employee(ID_Employee),
+Constraint CH_TIN check(len(TIN) = 10),
+Constraint CH_Date check(Date_Od_Purchase > Dateadd(day,-31,sysdatetime())))
 
 
-BULK INSERT Pracownik From 'C:\Users\HP\Desktop\Projekt_tabel\Pracownik.csv' with
+BULK INSERT Employee From 'C:\Users\HP\Desktop\Projekt_tabel\Pracownik.csv' with
 (
 Datafiletype = 'Widechar',
 Format = 'CSV',
@@ -66,7 +66,7 @@ Firstrow = 2,
 Fieldterminator = ',',
 Rowterminator = '\n');
 
-BULK INSERT Produkty From 'C:\Users\HP\Desktop\Projekt_tabel\Tabela zwrotów.csv' with
+BULK INSERT Products From 'C:\Users\HP\Desktop\Projekt_tabel\Tabela zwrotów.csv' with
 (
 Datafiletype = 'Widechar',
 Format = 'CSV',
@@ -74,7 +74,7 @@ Firstrow = 2,
 Fieldterminator = ',',
 Rowterminator = '\n');
 
-BULK INSERT Tranzakcje From 'C:\Users\HP\Desktop\Projekt_tabel\Tranzakcje.csv' with
+BULK INSERT Transactions From 'C:\Users\HP\Desktop\Projekt_tabel\Tranzakcje.csv' with
 (
 Datafiletype = 'Widechar',
 Format = 'CSV',
@@ -82,154 +82,143 @@ Firstrow = 2,
 Fieldterminator = ',',
 Rowterminator = '\n');
 
-INSERT INTO Stanowiska(ID_Stanowiska, Nazwa)
+INSERT INTO Positions(ID_Position, Job_Name)
 	Values(1,'Kierowca samochodu specjalnego'),(2,'Konserwator'),(3,'Inspektor'),(4,'Laborant');
 
--- Tabela w której znajdują się produkty, które nie straciły okresu używalności.
-CREATE VIEW Tabela_Terminów as 
+
+CREATE VIEW Term_Table as 
 
 With A as
 
-	(select Pk.Imię, Pk.Nazwisko, T.Numer_Obcy, Py.Nazwa_Produktu, T.Wartość_Produktu, Py.Kwota_Zwrotu, 
-	Case when Kwota_Zwrotu <= Wartość_Produktu then Kwota_Zwrotu Else Wartość_Produktu end as Do_Zwrotu, T.Data_Zakupu,
-	DATEADD(month,Py.Okres_Używalności,T.Data_Zakupu) as Koniec_Używalności, Pk.ID_Pracownika, Py.Okres_Używalności, Py.ID_Produktu
-	From Pracownik as Pk join Tranzakcje as T on Pk.ID_Pracownika = T.ID_Pracownika
-	join Produkty as Py on T.ID_Produktu = Py.ID_Produktu),
+	(select E.Name, E.Last_Name, T.Foreign_Number, P.Product_Name, T.Product_Value, P.Refund_Amount, 
+	Case when Refund_Amount <= Product_Value then Refund_Amount Else Product_Value end as For_Return, T.Date_Od_Purchase,
+	DATEADD(month,Py.Expiry_Date,T.Date_Od_Purchase) as Last_Day_Expiry, P.ID_Employee, P.Expiry_Date, P.ID_Product
+	From Employee as E join Transactions as T on E.ID_Employee = T.ID_Employee
+	join Products as P on T.ID_Product = P.ID_Product),
 
 B as
 
-	(Select Imię, Nazwisko, Numer_Obcy, Nazwa_Produktu, Wartość_Produktu, Kwota_Zwrotu, Do_Zwrotu,
-	Data_Zakupu, Koniec_Używalności, DATEDIFF(day,SYSDATETIME(),Koniec_Używalności) as Pozostało_dni, ID_Produktu, ID_Pracownika
+	(Select Name, Last_Name, Foreign_Number, Product_Name, Product_Value, Refund_Amount, For_Return,
+	Date_Od_Purchase, Last_Day_Expiry, DATEDIFF(day,SYSDATETIME(),Last_Day_Expiry) as Days_Left, ID_Product, ID_Employee
 	From A)
 
-Select Imię, Nazwisko, Numer_Obcy, Nazwa_Produktu, Wartość_Produktu, Kwota_Zwrotu, Do_Zwrotu,
-Data_Zakupu, Koniec_Używalności, Pozostało_dni, ID_Produktu, ID_PRacownika
+Select Name, Last_Name, Foreign_Number, Product_Name, Product_Value, Refund_Amount, For_Return,
+Date_Od_Purchase, Last_Day_Expiry, Days_Left, ID_Product, ID_Employee
 From B
-where Pozostało_Dni > 0;
+where Days_Left > 0;
 
--- Podgląd produktów, którym nie skończył sie termin używalności.
-select * from Tabela_Terminów;
 
--- Procedura na wstawianie nowych tranzakcji, która blokuje wprowadzenie produktu, który nie stracił okresu używalności. 
-CREATE PROCEDURE Wstawianie_Tranzakcji
-@Numer_Obcy varchar(20),
-@Firma varchar(50),
-@NIP numeric(10,0),
-@Nazwa_Produktu varchar(100),
-@Wartość_Produktu money,
-@Data_Zakupu date,
-@ID_Produktu char(2),
-@ID_Pracownika varchar(2) as
+CREATE PROCEDURE Inserting_Transaction
+@Foreign_Number varchar(20),
+@Company varchar(50),
+@TIN numeric(10,0),
+@Product_Name varchar(100),
+@Product_Value money,
+@Date_Od_Purchase date,
+@ID_Product char(2),
+@ID_Employee varchar(2) as
 
 begin
-	If  @ID_Produktu + @ID_Pracownika in (Select ID_Produktu + cast(ID_Pracownika as varchar(2)) 
+	If  @ID_Product + @ID_Employee in (Select ID_Product + cast(ID_Employee as varchar(2)) 
 	from Tabela_Terminów)
 
-	print 'Faktura nie może być wprowadzona, ponieważ nie skończył się okres używalności dla produktu'
+	print 'Invoice can't be inserted, because the expiration date hasn't expired'
   
 Else 
-	INSERT INTO Tranzakcje (Numer_Obcy, Firma, NIP, Nazwa_Produktu, Wartość_Produktu, Data_Zakupu, ID_Produktu, ID_Pracownika)
-	Values(@Numer_Obcy, @Firma, @NIP, @Nazwa_Produktu, @Wartość_Produktu, @Data_Zakupu, @ID_Produktu, @ID_Pracownika)
+	INSERT INTO Transactions (Foreign_Number, Company, TIN, Product_Name, Product_Value, Date_Od_Purchase, ID_Product, ID_Employee)
+	Values(@Foreign_Number, @Company, @TIN, @Product_Name, @Product_Value, @Date_Od_Purchase, @ID_Product, @ID_Employee)
   
 end;
  
---Wstawianie nowych tranzakcji
-exec Wstawianie_Tranzakcji [FA/1456/123], Krzak2, 5678901234, Polar, 110, '20240205', '1G', 1
 
--- Tabela do Triggera, który kontroluje wykasowane tranzakcje
-CREATE TABLE Tranzakcje_Deleted
+CREATE TABLE Transactions_Deleted
 (
 Nr int identity not null,
 Login sysname Default Original_login() not null,
 Data datetime2(0) Default Sysdatetime() not null,
-Numer_Obcy varchar(30) not null,
-NIP numeric (10,0) not null,
-Nazwa_Produktu varchar (100) not null,
-Data_Zakupu date not null,
-Constraint PK_Tranzakcje_Deleted Primary Key(Nr),
-Constraint CH_NIP_Tranzakce_Deleted check(len(NIP) = 10));
+Foreign_Number varchar(30) not null,
+TIN numeric (10,0) not null,
+Product_Name varchar (100) not null,
+Date_Od_Purchase date not null,
+Constraint PK_Transactions_Deleted Primary Key(Nr),
+Constraint CH_TIN_Transactions_Deleted check(len(TIN) = 10));
 
--- Trigger, który kontroluje kasowanie tranzakcji
-CREATE TRIGGER Trigger_Delete on Tranzakcje after delete as
-INSERT INTO Tranzakcje_Deleted (Numer_obcy, NIP, Nazwa_Produktu, Data_Zakupu)
-SELECT Numer_Obcy, NIP, Nazwa_Produktu, Data_Zakupu from Deleted;
+CREATE TRIGGER Trigger_Delete on Transactions after delete as
+INSERT INTO Transactions_Deleted (Foreign_Number, TIN, Product_Name, Date_Od_Purchase)
+SELECT Foreign_Number, TIN, Product_Name, Date_Od_Purchase from Deleted;
 
--- Tabela do Triggera, który kontroluje nadpisywanie tranzakcji
-CREATE TABLE Tranzakcje_Update
+
+CREATE TABLE Transactions_Update
 (
 Nr int null,
 Login sysname Default Original_login() not null,
 Data datetime2(0) Default Sysdatetime() not null,
-Numer_Obcy_Del varchar(100) not null,
-Numer_Obcy_Ins varchar(100) not null,
-Firma_Del varchar(50) not null,
-Firma_Ins varchar(50) not null,
-NIP_Del numeric (10,0) not null,
-NIP_Ins numeric (10,0) not null,
-Nazwa_Produktu_Del varchar (100) not null,
-Nazwa_Produktu_Ins varchar (100) not null,
-Data_Zakupu_Del date not null,
-Data_Zakupu_Ins date not null,
-Wartość_Produktu_Del money not null,
-Wartość_Produktu_Ins money not null,
-ID_Produktu_Del char(2) not null,
-ID_Produktu_Ins char(2) not null,
-ID_Pracownika_Del tinyint not null,
-ID_Pracownika_Ins tinyint not null,
-Constraint CH_NIP_Tranzakce_Update_Deleted check(len(NIP_Del) = 10),
-Constraint CH_NIP_Tranzakce_Update_Inserted check(len(NIP_Ins) = 10));
+Foreign_Number_Del varchar(100) not null,
+Foreign_Number_Ins varchar(100) not null,
+Company_Del varchar(50) not null,
+Company_Ins varchar(50) not null,
+TIN_Del numeric (10,0) not null,
+TIN_Ins numeric (10,0) not null,
+Product_Name_Del varchar (100) not null,
+Product_Name_Ins varchar (100) not null,
+Date_Of_Purchase_Del date not null,
+Date_Of_Purchase_Ins date not null,
+Product_Value_Del money not null,
+Product_Value_Ins money not null,
+ID_Product_Del char(2) not null,
+ID_Product_Ins char(2) not null,
+ID_Employee_Del tinyint not null,
+ID_Employee_Ins tinyint not null,
+Constraint CH_TIN_Transactions_Update_Deleted check(len(TIN_Del) = 10),
+Constraint CH_TIN_Transactions_Update_Inserted check(len(TIN_Ins) = 10));
 
--- Trigger kontrolujący nadpisywanie tranzakcji
-CREATE TRIGGER Trigger_Update on Tranzakcje after update as
-INSERT INTO Tranzakcje_Update (Nr,Numer_Obcy_Del, Numer_Obcy_Ins, Firma_Del, Firma_Ins, NIP_Del, NIP_Ins, Nazwa_Produktu_Del, Nazwa_Produktu_Ins,
-	Data_Zakupu_Del, Data_Zakupu_Ins, Wartość_Produktu_Del, Wartość_Produktu_Ins, ID_Produktu_Del, ID_Produktu_Ins, ID_Pracownika_Del, ID_Pracownika_Ins)
-SELECT D.Nr, D.Numer_Obcy, I.Numer_Obcy, D.Firma, I.Firma, D.NIP, I.NIP, D.Nazwa_Produktu, I.Nazwa_Produktu, D.Data_Zakupu,
-	I.Data_Zakupu, D.Wartość_Produktu, I.Wartość_Produktu, D.ID_Produktu, I.ID_Produktu, D.ID_Pracownika, I.ID_Pracownika From Deleted as D
+
+CREATE TRIGGER Trigger_Update on Transactions after update as
+INSERT INTO Transactions_Update (Nr,Foreign_Number_Del, Foreign_Number_Ins, Company_Del, Company_Ins, TIN_Del, TIN_Ins, Product_Name_Del, Product_Name_Ins,
+	Date_Of_Purchase_Del, Date_Of_Purchase_Ins, Product_Value_Del, Product_Value_Ins, ID_Product_Del, ID_Product_Ins, ID_Employee_Del, ID_Employee_Ins)
+SELECT D.Nr, D.Foreign_Number, I.Foreign_Number, D.Company, I.Company, D.TIN, I.TIN, D.Product_Name, I.Product_Name, D.Date_Of_Purchase,
+	I.Date_Of_Purchase, D.Product_Value, I.Product_Value, D.ID_Product, I.ID_Product, D.ID_Employee, I.ID_Employee From Deleted as D
 	join Inserted as I on D.Nr = I.Nr;
 
-CREATE VIEW Tranzakcje_Update_View as
+CREATE VIEW Transactions_Update_View as
 
 WITH C as
 
 (select Nr, Case 
-when Numer_Obcy_Del <> Numer_Obcy_Ins then 'NUMER_OBCY zmienił się z ' +Upper(Numer_Obcy_Del)+ ' na ' +Upper(Numer_Obcy_Ins)
-when Nazwa_Produktu_Del <> Nazwa_Produktu_Ins then 'NAZWA_PRODUKTU zmieniła się z ' +Upper(Nazwa_Produktu_Del)+ ' na ' +Upper(Nazwa_Produktu_Ins) 
-when Firma_Del <> Firma_Ins then 'FIRMA została zmieniona z ' +Upper(Firma_Del)+ ' na ' +Upper(Firma_Ins)
-when NIP_Del <> NIP_Ins then 'NIP został zmieniony z ' +Upper(NIP_Del)+ ' na ' +Upper(NIP_Ins)
-when Data_Zakupu_Del <> Data_Zakupu_Ins  then 'DATA_ZAKUPU została zmieniona z ' +Upper(Data_Zakupu_Del)+ ' na ' +Upper(Data_Zakupu_Ins)
-when Wartość_Produktu_Del <> Wartość_Produktu_Ins then 'WARTOŚĆ_PRODUKTU została zmieniona z ' +Upper(Wartość_Produktu_Del)+ ' na ' +Upper(Wartość_Produktu_Ins)
-when ID_Produktu_Del <> ID_Produktu_Ins then 'ID_PRODUKTU zostało zmienione z ' +Upper(ID_Produktu_Del)+ ' na ' +Upper(ID_Produktu_Ins)
-when ID_Pracownika_Del <> ID_Pracownika_Ins then 'ID_PRACOWNIKA zostało zmienione z ' +Upper(ID_Pracownika_Del)+ ' na ' +Upper(ID_Pracownika_Ins)
-end as Zmiany, Login, Data
-from Tranzakcje_Update)
+when Foreign_Number_Del <> Foreign_Number_Ins then 'Foreign_Number has changed from ' +Upper(Foreign_Number_Del)+ ' for ' +Upper(Foreign_Number_Ins)
+when Product_Name_Del <> Product_Name_Ins then 'Product_Name has changed from ' +Upper(Product_Name_Del)+ ' for ' +Upper(Product_Name_Ins) 
+when Company_Del <> Company_Ins then 'Company has changed from ' +Upper(Company_Del)+ ' for ' +Upper(Company_Ins)
+when TIN_Del <> TIN_Ins then 'TIN has changed from ' +Upper(TIN_Del)+ ' for ' +Upper(TIN_Ins)
+when Date_Od_Purchase_Del <> Date_Od_Purchase_Ins  then 'Date_Od_Purchase has changed from ' +Upper(Date_Od_Purchase_Del)+ ' for ' +Upper(Date_Od_Purchase_Ins)
+when Product_Value_Del <> Product_Value_Ins then 'Product_Value has changed from ' +Upper(Product_Value_Del)+ ' for ' +Upper(Product_Value_Ins)
+when ID_Product_Del <> ID_Product_Ins then 'ID_Product has changed from ' +Upper(ID_Product_Del)+ ' for ' +Upper(ID_Product_Ins)
+when ID_Employee_Del <> ID_Employee_Ins then 'ID_Employee has changed from ' +Upper(ID_Employee_Del)+ ' for ' +Upper(ID_Employee_Ins)
+end as Changes, Login, Date
+from Transactions_Update)
 
-Select Nr, Zmiany, Login, Data
+Select Nr, Changes, Login, Date
 	from C
-	Where Zmiany is not null;
+	Where Changes is not null;
 
---Tabela zmian dnych Tranzakcji
-select * from Tranzakcje_Update_View
 
--- Tabela wszystkich dostępnych poleceń
-CREATE TABLE Tabela_Dostępnych_Poleceń
+CREATE TABLE Table_Available_Orders
 (
 Opis varchar(max) not null,
 Przykład varchar(max) not null,
 Dostępne_kolumny varchar(max) not null)
 
-INSERT INTO Tabela_Dostępnych_Poleceń
-	Values('Wstawianie nowych faktur i paragonów za ubranie/odzież','exec Wstawianie_Tranzakcji FA/1456/123, Krzak2, 5678901234, Polar, 110, "20240205", "1G", 1','Numer_Obcy, Firma, NIP, Nazwa_Produktu, Wartość_Produktu, ID_Produktu, ID_Pracownika'),
-	      ('Podgląd Stanowisk i dopasowanie do ID_Stanowiska','select * from Stanowiska','ID_Stanowiska, Nazwa'),
-	      ('Historia wszystkich tranzakcji','select * from Tranzakcje','Nr, Numer_Obcy, Firma, NIP, Nazwa_Produktu, Wartość_Produktu, Data_Zakupu, ID_Produktu, ID_Pracownika'),
-	      ('Opis dostępnych produktów, okres i kwoty zwrotu','select * from Produkty','ID_Produktu, Stanowisko, Nazwa_Produktu, Okres_Używalności, Kwota_Zwrotu'),
-	      ('Dane Pracownika','select * from Pracownik','ID_Pracownika, Imię, Nazwisko, Ulica, Nr_Budynku, Nr_Mieszkania, Miasto, Kod, PESEL, Telefon, Płeć, ID_Stanowiska'),
-	      ('Tabela produktów zakupionych, którym nie skończył się okres używalności','select * from Tabela_Terminów','Imię, Nazwisko, Numer_Obcy, Nazwa_Produktu, Wartość_Produktu, Kwota_Zwrotu, Do_Zwrotu, Data_Zakupu, Koniec_Używalności, Pozostało_Dni, ID_Produktu, ID_Pracownika'),
-	      ('Zabezpieczenie na wypadek wykasowania zamówienia','select * from Tranzakcje_Deleted','Nr, Login, Data, Numer_Obcy, NIP, Nazwa_Produktu, Data_Zakupu'),
-	      ('Zabezpieczenie na wypadek dokonywanych zmian w Tranzakcji','select * from Tranzakcje_Update_View','Nr, Zmiany, Login, Data');
+INSERT INTO Table_Available_Orders
+	Values('Inserting new invoices and receipts for clothes','exec Inserting_Transaction FA/1456/123, Krzak2, 5678901234, Polar, 110, "20240205", "1G", 1','Foreign_Number, Company, TIN, Product_Name, Product_Value, ID_Product, ID_Employee'),
+		  ('Name and ID of positions','select * from Positions','ID_Positions, Nazwa'),
+		  ('History of all transactions','select * from Transactions','Nr, Foreign_Number, Company, TIN, Product_Name, Product_Value, Date_Od_Purchase, ID_Product, ID_Employee'),
+		  ('Description of availeble products, period and refound amount','select * from Products','ID_Product, Stanowisko, Product_Name, Expiry_Date, Refund_Amount'),
+		  ('Employee data','select * from Employee','ID_Employee, Name, Last_Name, Street, Nr_Building, Nr_Apartment, City, ZIP, PESEL, Phone, Sex, ID_Position'),
+		  ('Table of purchased products, which expiry date has not expiring' ,'select * from Term_Table','Name, Last_Name, Foreign_Number, Product_Name, Product_Value, Refund_Amount, For_Return, Date_Od_Purchase, Last_Day_Expiry, Days_Left, ID_Product, ID_Employee'),
+		  ('Protection in case of order deleting','select * from Transactions_Deleted','Nr, Login, Data, Foreign_Number, TIN, Product_Name, Date_Od_Purchase'),
+		  ('Protection in case of order updating','select * from Transactions_Update_View','Nr, Changes, Login, Data');
 
 
--- Select do wszystkich dostępnych poleceń
-Select * from Tabela_Dostępnych_Poleceń
 
--- Dostęp do plików użytych w projekcie
-https://www.dropbox.com/scl/fo/yvriyohcozv0bux228rnu/AMkio4jJ4mzUnvBtNcJFbdM?rlkey=68zjlo1hg2b9xduxe6ioi6zxm&st=dnodu7p0&dl=0
+Select * from Table_Available_Orders
+
+

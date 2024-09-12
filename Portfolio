@@ -1,5 +1,3 @@
-use Portfolio
-
 CREATE TABLE Positions
 (
 ID_Position tinyint not null,
@@ -13,7 +11,7 @@ Position tinyint not null,
 Product_Name varchar(100) not null,
 Expiry_Date tinyint not null,
 Refund_Amount money not null,
-Constraint PK_Products Primary Key (ID_Product));
+Constraint PK_Products Primary Key (ID_Product));  
 
 CREATE TABLE Employee
 (
@@ -35,10 +33,9 @@ References Positions(ID_Position),
 Constraint CH_Zip check(len(Zip) = 5),
 Constraint CH_PESEL check(len(PESEL) = 11),
 Constraint CH_Phone check(len(Phone) = 9),
-Constraint CH_Sex check(Sex like '[WM]'));
+Constraint CH_Sex check(Sex like '[WM]'));  
 
-
-CREATE TABLE Transactions
+CREATE TABLE Transactions  
 (
 Nr int identity not null,
 Foreign_Number varchar(40) not null,
@@ -46,7 +43,7 @@ Company varchar(100) not null,
 TIN numeric(10,0) not null,
 Product_Name varchar(100) not null,
 Product_Value money not null,
-Date_Od_Purchase date not null,
+Date_Of_Purchase date not null,
 ID_Product char(2) not null,
 ID_Employee tinyint not null,
 Constraint PK_Nr Primary Key (Nr),
@@ -55,7 +52,7 @@ References Products(ID_Product),
 Constraint FK_ID_Employee Foreign Key (ID_Employee)
 References Employee(ID_Employee),
 Constraint CH_TIN check(len(TIN) = 10),
-Constraint CH_Date check(Date_Od_Purchase > Dateadd(day,-31,sysdatetime())))
+Constraint CH_Date check(Date_Of_Purchase > Dateadd(day,-31,sysdatetime())))
 
 
 BULK INSERT Employee From 'C:\Users\HP\Desktop\Projekt_tabel\Pracownik.csv' with
@@ -91,21 +88,21 @@ CREATE VIEW Term_Table as
 With A as
 
 	(select E.Name, E.Last_Name, T.Foreign_Number, P.Product_Name, T.Product_Value, P.Refund_Amount, 
-	Case when Refund_Amount <= Product_Value then Refund_Amount Else Product_Value end as To_Return, T.Date_Od_Purchase,
-	DATEADD(month,Py.Expiry_Date,T.Date_Od_Purchase) as Last_Day_Expiry, P.ID_Employee, P.Expiry_Date, P.ID_Product
+	Case when Refund_Amount <= Product_Value then Refund_Amount Else Product_Value end as To_Return, T.Date_Of_Purchase,
+	DATEADD(month, P.Expiry_Date,T.Date_Of_Purchase) as Last_Day_Expiry, E.ID_Employee, P.Expiry_Date, P.ID_Product
 	From Employee as E join Transactions as T on E.ID_Employee = T.ID_Employee
 	join Products as P on T.ID_Product = P.ID_Product),
 
 B as
 
 	(Select Name, Last_Name, Foreign_Number, Product_Name, Product_Value, Refund_Amount, To_Return,
-	Date_Od_Purchase, Last_Day_Expiry, DATEDIFF(day,SYSDATETIME(),Last_Day_Expiry) as Days_Left, ID_Product, ID_Employee
+	Date_Of_Purchase, Last_Day_Expiry, DATEDIFF(day,SYSDATETIME(),Last_Day_Expiry) as Days_Left, ID_Product, ID_Employee
 	From A)
 
 Select Name, Last_Name, Foreign_Number, Product_Name, Product_Value, Refund_Amount, To_Return,
-Date_Od_Purchase, Last_Day_Expiry, Days_Left, ID_Product, ID_Employee
+Date_Of_Purchase, Last_Day_Expiry, Days_Left, ID_Product, ID_Employee
 From B
-where Days_Left > 0;
+where Days_Left > 0;  
 
 
 CREATE PROCEDURE Inserting_Transaction
@@ -114,7 +111,7 @@ CREATE PROCEDURE Inserting_Transaction
 @TIN numeric(10,0),
 @Product_Name varchar(100),
 @Product_Value money,
-@Date_Od_Purchase date,
+@Date_Of_Purchase date,
 @ID_Product char(2),
 @ID_Employee varchar(2) as
 
@@ -122,11 +119,11 @@ begin
 	If  @ID_Product + @ID_Employee in (Select ID_Product + cast(ID_Employee as varchar(2)) 
 	from Tabela_Terminów)
 
-	print 'Invoice can't be inserted, because the expiration date hasn't expired'
+	print 'Invoice can not be inserted, because the expiration date has not expired'
   
 Else 
-	INSERT INTO Transactions (Foreign_Number, Company, TIN, Product_Name, Product_Value, Date_Od_Purchase, ID_Product, ID_Employee)
-	Values(@Foreign_Number, @Company, @TIN, @Product_Name, @Product_Value, @Date_Od_Purchase, @ID_Product, @ID_Employee)
+	INSERT INTO Transactions (Foreign_Number, Company, TIN, Product_Name, Product_Value, Date_Of_Purchase, ID_Product, ID_Employee)
+	Values(@Foreign_Number, @Company, @TIN, @Product_Name, @Product_Value, @Date_Of_Purchase, @ID_Product, @ID_Employee)
   
 end;
  
@@ -139,20 +136,20 @@ Data datetime2(0) Default Sysdatetime() not null,
 Foreign_Number varchar(30) not null,
 TIN numeric (10,0) not null,
 Product_Name varchar (100) not null,
-Date_Od_Purchase date not null,
+Date_Of_Purchase date not null,
 Constraint PK_Transactions_Deleted Primary Key(Nr),
 Constraint CH_TIN_Transactions_Deleted check(len(TIN) = 10));
 
 CREATE TRIGGER Trigger_Delete on Transactions after delete as
-INSERT INTO Transactions_Deleted (Foreign_Number, TIN, Product_Name, Date_Od_Purchase)
-SELECT Foreign_Number, TIN, Product_Name, Date_Od_Purchase from Deleted;
+INSERT INTO Transactions_Deleted (Foreign_Number, TIN, Product_Name, Date_Of_Purchase)
+SELECT Foreign_Number, TIN, Product_Name, Date_Of_Purchase from Deleted;
 
 
 CREATE TABLE Transactions_Update
 (
-Nr int null,
+Nr int identity not null,
 Login sysname Default Original_login() not null,
-Data datetime2(0) Default Sysdatetime() not null,
+Date datetime2(0) Default Sysdatetime() not null,
 Foreign_Number_Del varchar(100) not null,
 Foreign_Number_Ins varchar(100) not null,
 Company_Del varchar(50) not null,
@@ -170,35 +167,35 @@ ID_Product_Ins char(2) not null,
 ID_Employee_Del tinyint not null,
 ID_Employee_Ins tinyint not null,
 Constraint CH_TIN_Transactions_Update_Deleted check(len(TIN_Del) = 10),
-Constraint CH_TIN_Transactions_Update_Inserted check(len(TIN_Ins) = 10));
+Constraint CH_TIN_Transactions_Update_Inserted check(len(TIN_Ins) = 10)); 
 
 
 CREATE TRIGGER Trigger_Update on Transactions after update as
-INSERT INTO Transactions_Update (Nr,Foreign_Number_Del, Foreign_Number_Ins, Company_Del, Company_Ins, TIN_Del, TIN_Ins, Product_Name_Del, Product_Name_Ins,
+INSERT INTO Transactions_Update (Foreign_Number_Del, Foreign_Number_Ins, Company_Del, Company_Ins, TIN_Del, TIN_Ins, Product_Name_Del, Product_Name_Ins,
 	Date_Of_Purchase_Del, Date_Of_Purchase_Ins, Product_Value_Del, Product_Value_Ins, ID_Product_Del, ID_Product_Ins, ID_Employee_Del, ID_Employee_Ins)
-SELECT D.Nr, D.Foreign_Number, I.Foreign_Number, D.Company, I.Company, D.TIN, I.TIN, D.Product_Name, I.Product_Name, D.Date_Of_Purchase,
+SELECT D.Foreign_Number, I.Foreign_Number, D.Company, I.Company, D.TIN, I.TIN, D.Product_Name, I.Product_Name, D.Date_Of_Purchase,
 	I.Date_Of_Purchase, D.Product_Value, I.Product_Value, D.ID_Product, I.ID_Product, D.ID_Employee, I.ID_Employee From Deleted as D
 	join Inserted as I on D.Nr = I.Nr;
 
 CREATE VIEW Transactions_Update_View as
 
-WITH C as
+WITH C as  
 
 (select Nr, Case 
 when Foreign_Number_Del <> Foreign_Number_Ins then 'Foreign_Number has changed from ' +Upper(Foreign_Number_Del)+ ' for ' +Upper(Foreign_Number_Ins)
 when Product_Name_Del <> Product_Name_Ins then 'Product_Name has changed from ' +Upper(Product_Name_Del)+ ' for ' +Upper(Product_Name_Ins) 
 when Company_Del <> Company_Ins then 'Company has changed from ' +Upper(Company_Del)+ ' for ' +Upper(Company_Ins)
 when TIN_Del <> TIN_Ins then 'TIN has changed from ' +Upper(TIN_Del)+ ' for ' +Upper(TIN_Ins)
-when Date_Od_Purchase_Del <> Date_Od_Purchase_Ins  then 'Date_Od_Purchase has changed from ' +Upper(Date_Od_Purchase_Del)+ ' for ' +Upper(Date_Od_Purchase_Ins)
+when Date_Of_Purchase_Del <> Date_Of_Purchase_Ins  then 'Date_Of_Purchase has changed from ' +Upper(Date_Of_Purchase_Del)+ ' for ' +Upper(Date_Of_Purchase_Ins)
 when Product_Value_Del <> Product_Value_Ins then 'Product_Value has changed from ' +Upper(Product_Value_Del)+ ' for ' +Upper(Product_Value_Ins)
 when ID_Product_Del <> ID_Product_Ins then 'ID_Product has changed from ' +Upper(ID_Product_Del)+ ' for ' +Upper(ID_Product_Ins)
 when ID_Employee_Del <> ID_Employee_Ins then 'ID_Employee has changed from ' +Upper(ID_Employee_Del)+ ' for ' +Upper(ID_Employee_Ins)
 end as Changes, Login, Date
 from Transactions_Update)
 
-Select Nr, Changes, Login, Date
+Select Nr, Changes, Login, Date       
 	from C
-	Where Changes is not null;
+	Where Changes is not null;    
 
 
 CREATE TABLE Table_Available_Orders
@@ -210,16 +207,12 @@ Dostępne_kolumny varchar(max) not null)
 INSERT INTO Table_Available_Orders
 	Values('Inserting new invoices and receipts for clothes','exec Inserting_Transaction FA/1456/123, Krzak2, 5678901234, Polar, 110, "20240205", "1G", 1','Foreign_Number, Company, TIN, Product_Name, Product_Value, ID_Product, ID_Employee'),
 		  ('Name and ID of positions','select * from Positions','ID_Positions, Nazwa'),
-		  ('History of all transactions','select * from Transactions','Nr, Foreign_Number, Company, TIN, Product_Name, Product_Value, Date_Od_Purchase, ID_Product, ID_Employee'),
+		  ('History of all transactions','select * from Transactions','Nr, Foreign_Number, Company, TIN, Product_Name, Product_Value, Date_Of_Purchase, ID_Product, ID_Employee'),
 		  ('Description of availeble products, period and refound amount','select * from Products','ID_Product, Stanowisko, Product_Name, Expiry_Date, Refund_Amount'),
 		  ('Employee data','select * from Employee','ID_Employee, Name, Last_Name, Street, Nr_Building, Nr_Apartment, City, ZIP, PESEL, Phone, Sex, ID_Position'),
-		  ('Table of purchased products, which expiry date has not expiring' ,'select * from Term_Table','Name, Last_Name, Foreign_Number, Product_Name, Product_Value, Refund_Amount, To_Return, Date_Od_Purchase, Last_Day_Expiry, Days_Left, ID_Product, ID_Employee'),
-		  ('Protection in case of order deleting','select * from Transactions_Deleted','Nr, Login, Data, Foreign_Number, TIN, Product_Name, Date_Od_Purchase'),
+		  ('Table of purchased products, which expiry date has not expiring' ,'select * from Term_Table','Name, Last_Name, Foreign_Number, Product_Name, Product_Value, Refund_Amount, To_Return, Date_Of_Purchase, Last_Day_Expiry, Days_Left, ID_Product, ID_Employee'),
+		  ('Protection in case of order deleting','select * from Transactions_Deleted','Nr, Login, Data, Foreign_Number, TIN, Product_Name, Date_Of_Purchase'),
 		  ('Protection in case of order updating','select * from Transactions_Update_View','Nr, Changes, Login, Data');
 
-
-
-Select * from Table_Available_Orders
-
--- Tables availeble for download -- Pracownik, Tabele Zwrotów, Tranzakcje
+-- Tables available for download -- Pracownik, Tabele Zwrotów, Tranzakcje
 https://www.dropbox.com/scl/fo/yvriyohcozv0bux228rnu/AMkio4jJ4mzUnvBtNcJFbdM?rlkey=7hxz3gur7t2qdudnyg86pieyj&st=2h15fmz8&dl=0
